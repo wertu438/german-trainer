@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeutschStart — тренажёр немецкого</title>
+  <style>
+    /* Палитра и базовые настройки */
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f8faff;
+      --text: #1d2942;
+      --muted: #71809b;
+      --primary: #536dfe;
+      --primary-dark: #3f55d9;
+      --accent: #ffb74d;
+      --success: #22a06b;
+      --danger: #e05252;
+      --border: #e4e9f2;
+      --shadow: 0 16px 45px rgba(49, 67, 110, .10);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 90% 0%, rgba(83, 109, 254, .13), transparent 27rem),
+        radial-gradient(circle at 0% 100%, rgba(255, 183, 77, .10), transparent 25rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .app-shell {
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 26px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
+      color: white;
+      font-size: 24px;
+      background: linear-gradient(135deg, var(--primary), #7b61ff);
+      box-shadow: 0 9px 20px rgba(83, 109, 254, .25);
+    }
+    .brand h1 { margin: 0; font-size: 21px; letter-spacing: -.4px; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .stat {
+      min-width: 92px;
+      padding: 10px 13px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,.72);
+      text-align: center;
+    }
+    .stat strong { display: block; font-size: 18px; line-height: 1.1; }
+    .stat span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      padding: 6px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      border-radius: 17px;
+      background: rgba(255,255,255,.8);
+      box-shadow: 0 7px 22px rgba(45, 63, 102, .05);
+    }
+    .tab {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 10px;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 700;
+      font-size: 14px;
+      transition: .2s ease;
+    }
+    .tab:hover { color: var(--text); background: #f1f4ff; }
+    .tab.active { color: var(--primary-dark); background: #eaf0ff; }
+
+    .content { min-height: 560px; }
+    .panel { animation: appear .25s ease; }
+    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .mode-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .mode-heading h2 { margin: 0; font-size: 26px; letter-spacing: -.7px; }
+    .mode-heading p { margin: 6px 0 0; color: var(--muted); }
+    .topic-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 11px;
+      border-radius: 99px;
+      color: #99610e;
+      background: #fff4dc;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    /* Режим карточек */
+    .flashcard-wrap { perspective: 1200px; max-width: 690px; margin: 25px auto 0; }
+    .flashcard {
+      position: relative;
+      min-height: 370px;
+      transform-style: preserve-3d;
+      transition: transform .55s cubic-bezier(.2,.75,.25,1);
+      cursor: pointer;
+    }
+    .flashcard.is-flipped { transform: rotateY(180deg); }
+    .flash-side {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 35px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .flash-side.back { transform: rotateY(180deg); background: linear-gradient(145deg, #fdfdff, #f2f5ff); }
+    .flash-side .label { color: var(--muted); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; }
+    .flash-word { margin: 18px 0 9px; font-size: clamp(34px, 7vw, 58px); letter-spacing: -2px; }
+    .flash-translation { margin: 14px 0 5px; font-size: clamp(30px, 6vw, 48px); }
+    .pronunciation { color: var(--primary-dark); font-size: 18px; }
+    .flip-hint { margin-top: 31px; color: var(--muted); font-size: 13px; }
+    .flash-actions { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 45px;
+      padding: 0 17px;
+      border: 1px solid transparent;
+      border-radius: 13px;
+      font-weight: 750;
+      font-size: 14px;
+      transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { color: white; background: var(--primary); box-shadow: 0 8px 17px rgba(83, 109, 254, .22); }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { color: var(--text); border-color: var(--border); background: var(--surface); }
+    .btn-secondary:hover { background: #f5f7fc; }
+    .btn-ghost { color: var(--primary-dark); background: #edf1ff; }
+    .btn-sound { color: var(--primary-dark); background: #edf1ff; }
+
+    /* Тесты */
+    .quiz-card { max-width: 760px; margin: 0 auto; padding: clamp(22px, 5vw, 38px); }
+    .quiz-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; font-weight: 700; }
+    .progress-track { height: 8px; overflow: hidden; margin: 12px 0 34px; border-radius: 99px; background: #e9edf5; }
+    .progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--primary), #8b70ff); transition: width .35s ease; }
+    .question-label { margin-bottom: 11px; color: var(--primary); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; }
+    .question { margin: 0 0 25px; font-size: clamp(28px, 6vw, 42px); letter-spacing: -.9px; }
+    .question small { display: block; margin-top: 10px; color: var(--muted); font-size: 15px; font-weight: 500; letter-spacing: 0; }
+    .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .answer {
+      min-height: 57px;
+      padding: 12px 15px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      background: white;
+      text-align: left;
+      font-weight: 700;
+      transition: .18s ease;
+    }
+    .answer:hover:not(:disabled) { border-color: #aebaff; background: #f7f8ff; transform: translateY(-1px); }
+    .answer.correct { border-color: #8ed9b8; color: #087446; background: #eafaf2; }
+    .answer.wrong { border-color: #f1aaaa; color: #a52e2e; background: #fff0f0; }
+    .answer:disabled { cursor: default; }
+    .feedback { min-height: 26px; margin-top: 20px; font-weight: 700; }
+    .feedback.good { color: var(--success); }
+    .feedback.bad { color: var(--danger); }
+
+    .result { padding: 45px 25px; text-align: center; }
+    .result-icon { font-size: 54px; }
+    .result h3 { margin: 13px 0 8px; font-size: 30px; }
+    .result p { margin: 0 auto 25px; max-width: 430px; color: var(--muted); line-height: 1.55; }
+    .score-big { margin: 15px 0 25px; color: var(--primary-dark); font-size: 52px; font-weight: 850; letter-spacing: -2px; }
+
+    /* Пропуски */
+    .fill-form { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin: 28px 0; font-size: clamp(21px, 4vw, 31px); line-height: 1.8; font-weight: 700; }
+    .fill-input { width: min(230px, 58vw); padding: 6px 11px; border: 0; border-bottom: 3px solid var(--primary); outline: 0; color: var(--primary-dark); background: #f4f6ff; font-weight: 800; text-align: center; }
+    .fill-input:focus { border-bottom-color: var(--accent); }
+    .fill-input:disabled { opacity: 1; }
+    .fill-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .hint { margin-top: 15px; color: var(--muted); font-size: 14px; }
+    .hint strong { color: var(--text); }
+
+    .empty { padding: 50px 25px; text-align: center; }
+    .empty h3 { margin-top: 0; }
+    .empty p { color: var(--muted); }
+    .footer-note { margin-top: 24px; color: var(--muted); font-size: 12px; text-align: center; }
+
+    @media (max-width: 680px) {
+      .app-shell { width: min(100% - 20px, 540px); padding-top: 20px; }
+      .topbar { align-items: flex-start; flex-direction: column; gap: 15px; }
+      .stats { width: 100%; }
+      .stat { flex: 1; min-width: 0; }
+      .tabs { grid-template-columns: 1fr 1fr; }
+      .tab { min-height: 50px; font-size: 13px; }
+      .mode-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+      .flashcard { min-height: 330px; }
+      .answers { grid-template-columns: 1fr; }
+      .quiz-card { padding: 22px 17px; }
+      .question { font-size: 31px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">DE</div>
+        <div>
+          <h1>DeutschStart</h1>
+          <p>Немецкий с нуля · уровень A1–A2</p>
+        </div>
+      </div>
+      <div class="stats" aria-label="Статистика обучения">
+        <div class="stat"><strong id="totalScore">0</strong><span>правильных</span></div>
+        <div class="stat"><strong id="accuracy">0%</strong><span>точность</span></div>
+        <div class="stat"><strong id="mistakes">0</strong><span>на повторении</span></div>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Режимы тренировки">
+      <button class="tab active" data-mode="flashcards">🃏 Карточки</button>
+      <button class="tab" data-mode="de-to-ru">🇩🇪 Слово → перевод</button>
+      <button class="tab" data-mode="ru-to-de">🔁 Перевод → слово</button>
+      <button class="tab" data-mode="fill">✍️ Пропуск</button>
+    </nav>
+
+    <section id="content" class="content"></section>
+    <p class="footer-note">Прогресс сохраняется автоматически в этом браузере · Ошибки встречаются чаще</p>
+  </main>
+
+  <script>
+    /*
+      МАССИВ СЛОВАРЯ
+      Чтобы добавить слово, скопируйте один объект и измените его поля:
+      id — уникальный идентификатор, de — немецкое слово с артиклем,
+      ru — перевод, pronunciation — приблизительное произношение,
+      topic — тема для подписи на карточке.
+    */
+    const vocabulary = [
+      { id: 'mann', de: 'der Mann', ru: 'мужчина', pronunciation: '[дэа ман]', topic: 'Знакомство' },
+      { id: 'frau', de: 'die Frau', ru: 'женщина', pronunciation: '[ди фрау]', topic: 'Знакомство' },
+      { id: 'kind', de: 'das Kind', ru: 'ребёнок', pronunciation: '[дас кинт]', topic: 'Базовые слова' },
+      { id: 'freund', de: 'der Freund', ru: 'друг', pronunciation: '[дэа фройнт]', topic: 'Знакомство' },
+      { id: 'freundin', de: 'die Freundin', ru: 'подруга', pronunciation: '[ди фройндин]', topic: 'Знакомство' },
+      { id: 'name', de: 'der Name', ru: 'имя', pronunciation: '[дэа намэ]', topic: 'Знакомство' },
+      { id: 'haus', de: 'das Haus', ru: 'дом', pronunciation: '[дас хаус]', topic: 'Базовые слова' },
+      { id: 'stadt', de: 'die Stadt', ru: 'город', pronunciation: '[ди штат]', topic: 'Базовые слова' },
+      { id: 'buch', de: 'das Buch', ru: 'книга', pronunciation: '[дас бух]', topic: 'Базовые слова' },
+      { id: 'schule', de: 'die Schule', ru: 'школа', pronunciation: '[ди шулэ]', topic: 'Базовые слова' },
+      { id: 'lehrer', de: 'der Lehrer', ru: 'учитель', pronunciation: '[дэа лэрэа]', topic: 'Базовые слова' },
+      { id: 'sprache', de: 'die Sprache', ru: 'язык', pronunciation: '[ди шпрахэ]', topic: 'Базовые слова' },
+      { id: 'sein', de: 'sein', ru: 'быть', pronunciation: '[зайн]', topic: 'Глаголы' },
+      { id: 'haben', de: 'haben', ru: 'иметь', pronunciation: '[хабэн]', topic: 'Глаголы' },
+      { id: 'gehen', de: 'gehen', ru: 'идти', pronunciation: '[гээн]', topic: 'Глаголы' },
+      { id: 'kommen', de: 'kommen', ru: 'приходить', pronunciation: '[комэн]', topic: 'Глаголы' },
+      { id: 'machen', de: 'machen', ru: 'делать', pronunciation: '[махэн]', topic: 'Глаголы' },
+      { id: 'lernen', de: 'lernen', ru: 'учить(ся)', pronunciation: '[лэрнэн]', topic: 'Глаголы' },
+      { id: 'sprechen', de: 'sprechen', ru: 'говорить', pronunciation: '[шпрэхэн]', topic: 'Глаголы' },
+      { id: 'wohnen', de: 'wohnen', ru: 'жить', pronunciation: '[вонэн]', topic: 'Глаголы' },
+      { id: 'essen', de: 'essen', ru: 'есть', pronunciation: '[эссэн]', topic: 'Глаголы' },
+      { id: 'trinken', de: 'trinken', ru: 'пить', pronunciation: '[тринкэн]', topic: 'Глаголы' },
+      { id: 'eins', de: 'eins', ru: 'один', pronunciation: '[айнс]', topic: 'Числа' },
+      { id: 'zwei', de: 'zwei', ru: 'два', pronunciation: '[цвай]', topic: 'Числа' },
+      { id: 'drei', de: 'drei', ru: 'три', pronunciation: '[драй]', topic: 'Числа' },
+      { id: 'vier', de: 'vier', ru: 'четыре', pronunciation: '[фиа]', topic: 'Числа' },
+      { id: 'fuenf', de: 'fünf', ru: 'пять', pronunciation: '[фюнф]', topic: 'Числа' },
+      { id: 'sechs', de: 'sechs', ru: 'шесть', pronunciation: '[зэкс]', topic: 'Числа' },
+      { id: 'sieben', de: 'sieben', ru: 'семь', pronunciation: '[зибэн]', topic: 'Числа' },
+      { id: 'acht', de: 'acht', ru: 'восемь', pronunciation: '[ахт]', topic: 'Числа' },
+      { id: 'neun', de: 'neun', ru: 'девять', pronunciation: '[нойн]', topic: 'Числа' },
+      { id: 'zehn', de: 'zehn', ru: 'десять', pronunciation: '[цээн]', topic: 'Числа' },
+      { id: 'rot', de: 'rot', ru: 'красный', pronunciation: '[рот]', topic: 'Цвета' },
+      { id: 'blau', de: 'blau', ru: 'синий', pronunciation: '[блау]', topic: 'Цвета' },
+      { id: 'gruen', de: 'grün', ru: 'зелёный', pronunciation: '[грюн]', topic: 'Цвета' },
+      { id: 'gelb', de: 'gelb', ru: 'жёлтый', pronunciation: '[гельп]', topic: 'Цвета' },
+      { id: 'schwarz', de: 'schwarz', ru: 'чёрный', pronunciation: '[шварц]', topic: 'Цвета' },
+      { id: 'weiss', de: 'weiß', ru: 'белый', pronunciation: '[вайс]', topic: 'Цвета' },
+      { id: 'braun', de: 'braun', ru: 'коричневый', pronunciation: '[браун]', topic: 'Цвета' },
+      { id: 'orange', de: 'orange', ru: 'оранжевый', pronunciation: '[оранж]', topic: 'Цвета' },
+      { id: 'apfel', de: 'der Apfel', ru: 'яблоко', pronunciation: '[дэа апфэль]', topic: 'Еда' },
+      { id: 'banane', de: 'die Banane', ru: 'банан', pronunciation: '[ди бананэ]', topic: 'Еда' },
+      { id: 'brot', de: 'das Brot', ru: 'хлеб', pronunciation: '[дас брот]', topic: 'Еда' },
+      { id: 'kaese', de: 'der Käse', ru: 'сыр', pronunciation: '[дэа кэзэ]', topic: 'Еда' },
+      { id: 'milch', de: 'die Milch', ru: 'молоко', pronunciation: '[ди мильх]', topic: 'Еда' },
+      { id: 'kaffee', de: 'der Kaffee', ru: 'кофе', pronunciation: '[дэа кафэ]', topic: 'Еда' },
+      { id: 'wasser', de: 'das Wasser', ru: 'вода', pronunciation: '[дас вассэр]', topic: 'Еда' },
+      { id: 'tee', de: 'der Tee', ru: 'чай', pronunciation: '[дэа тэ]', topic: 'Еда' },
+      { id: 'suppe', de: 'die Suppe', ru: 'суп', pronunciation: '[ди зуппэ]', topic: 'Еда' },
+      { id: 'fruehstueck', de: 'das Frühstück', ru: 'завтрак', pronunciation: '[дас фрюштюк]', topic: 'Еда' },
+      { id: 'hallo', de: 'Hallo!', ru: 'Привет!', pronunciation: '[халло]', topic: 'Фразы' },
+      { id: 'guten-morgen', de: 'Guten Morgen!', ru: 'Доброе утро!', pronunciation: '[гутэн моргэн]', topic: 'Фразы' },
+      { id: 'guten-abend', de: 'Guten Abend!', ru: 'Добрый вечер!', pronunciation: '[гутэн абэнт]', topic: 'Фразы' },
+      { id: 'wie-gehts', de: 'Wie geht’s?', ru: 'Как дела?', pronunciation: '[ви гейтс]', topic: 'Фразы' },
+      { id: 'danke', de: 'Danke!', ru: 'Спасибо!', pronunciation: '[данкэ]', topic: 'Фразы' },
+      { id: 'bitte', de: 'Bitte!', ru: 'Пожалуйста!', pronunciation: '[биттэ]', topic: 'Фразы' },
+      { id: 'auf-wiedersehen', de: 'Auf Wiedersehen!', ru: 'До свидания!', pronunciation: '[ауф видэрзеэн]', topic: 'Фразы' },
+      { id: 'ich-heisse', de: 'Ich heiße …', ru: 'Меня зовут …', pronunciation: '[их хайсэ]', topic: 'Знакомство' },
+      { id: 'ich-komme', de: 'Ich komme aus …', ru: 'Я из …', pronunciation: '[их комэ аус]', topic: 'Знакомство' },
+      { id: 'ich-lerne', de: 'Ich lerne Deutsch.', ru: 'Я учу немецкий.', pronunciation: '[их лэрнэ дойч]', topic: 'Знакомство' },
+      { id: 'entschuldigung', de: 'Entschuldigung!', ru: 'Извините!', pronunciation: '[энтшульдигунг]', topic: 'Фразы' }
+    ];
+
+    // Фразы для режима «Вставь пропущенное слово».
+    const fillQuestions = [
+      { id: 'fill-1', parts: ['Ich ', ' Anna.'], answer: 'heiße', hint: 'Меня зовут Анна' },
+      { id: 'fill-2', parts: ['Ich ', ' Deutsch.'], answer: 'lerne', hint: 'Я учу немецкий' },
+      { id: 'fill-3', parts: ['Ich ', ' aus Berlin.'], answer: 'komme', hint: 'Я из Берлина' },
+      { id: 'fill-4', parts: ['Wie ', ' es dir?'], answer: 'geht', hint: 'Как у тебя дела?' },
+      { id: 'fill-5', parts: ['Ich ', ' Wasser.'], answer: 'trinke', hint: 'Я пью воду' },
+      { id: 'fill-6', parts: ['Ich ', ' ein Buch.'], answer: 'habe', hint: 'У меня есть книга' },
+      { id: 'fill-7', parts: ['Das Brot ist ', '.'], answer: 'gut', hint: 'Хлеб хороший' },
+      { id: 'fill-8', parts: ['Der Apfel ist ', '.'], answer: 'rot', hint: 'Яблоко красное' },
+      { id: 'fill-9', parts: ['Ich ', ' in Berlin.'], answer: 'wohne', hint: 'Я живу в Берлине' },
+      { id: 'fill-10', parts: ['Wir ', ' Deutsch.'], answer: 'sprechen', hint: 'Мы говорим по-немецки' },
+      { id: 'fill-11', parts: ['Guten ', '!'], answer: 'Morgen', hint: 'Доброе утро!' },
+      { id: 'fill-12', parts: ['Auf ', '!'], answer: 'Wiedersehen', hint: 'До свидания!' }
+    ];
+
+    const STORAGE_KEY = 'deutschStartProgressV1';
+    const defaultState = {
+      answered: 0,
+      correct: 0,
+      bestScore: 0,
+      lastScore: 0,
+      mistakes: {} // id: количество ошибок; чем больше число, тем чаще элемент попадается
+    };
+
+    let state = loadState();
+    let currentMode = 'flashcards';
+    let flashIndex = 0;
+    let flashFlipped = false;
+    let quiz = null;
+
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return saved ? { ...defaultState, ...saved, mistakes: saved.mistakes || {} } : { ...defaultState };
+      } catch (error) {
+        return { ...defaultState };
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      updateStats();
+    }
+
+    function updateStats() {
+      document.querySelector('#totalScore').textContent = state.correct;
+      document.querySelector('#accuracy').textContent = state.answered ? Math.round(state.correct / state.answered * 100) + '%' : '0%';
+      document.querySelector('#mistakes').textContent = Object.values(state.mistakes).filter(value => value > 0).length;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[char]));
+    }
+
+    function shuffle(items) {
+      const result = [...items];
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    }
+
+    // Взвешенный выбор: ошибка добавляет элементу два дополнительных «билета».
+    function weightedItem(items) {
+      const pool = items.flatMap(item => [item, item, ...(Array(state.mistakes[item.id] || 0).fill(item))]);
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function speak(text) {
+      if (!('speechSynthesis' in window)) {
+        alert('В этом браузере озвучка не поддерживается.');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text.replace(/[.!?…]+$/, ''));
+      utterance.lang = 'de-DE';
+      utterance.rate = .82;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function markAnswer(id, isCorrect) {
+      state.answered++;
+      if (isCorrect) {
+        state.correct++;
+        if (state.mistakes[id]) state.mistakes[id] = Math.max(0, state.mistakes[id] - 1);
+      } else {
+        state.mistakes[id] = (state.mistakes[id] || 0) + 2;
+      }
+      saveState();
+    }
+
+    function render() {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.mode === currentMode));
+      if (currentMode === 'flashcards') renderFlashcards();
+      if (currentMode === 'de-to-ru') renderQuiz('de-to-ru');
+      if (currentMode === 'ru-to-de') renderQuiz('ru-to-de');
+      if (currentMode === 'fill') renderFill();
+      updateStats();
+    }
+
+    function renderFlashcards() {
+      const item = vocabulary[flashIndex];
+      document.querySelector('#content').innerHTML = `
+        <div class="panel">
+          <div class="mode-heading">
+            <div><h2>Карточки</h2><p>Нажмите на карточку, чтобы увидеть перевод и произношение.</p></div>
+            <span class="topic-pill">● ${escapeHtml(item.topic)}</span>
+          </div>
+          <div class="flashcard-wrap">
+            <div class="flashcard ${flashFlipped ? 'is-flipped' : ''}" id="flashcard" role="button" tabindex="0" aria-label="Перевернуть карточку">
+              <div class="flash-side front">
+                <span class="label">Немецкое слово</span>
+                <strong class="flash-word">${escapeHtml(item.de)}</strong>
+                <button class="btn btn-sound" data-speak="${escapeHtml(item.de)}" type="button">🔊 Услышать</button>
+                <span class="flip-hint">Нажмите в любом месте, чтобы перевернуть</span>
+              </div>
+              <div class="flash-side back">
+                <span class="label">Перевод</span>
+                <strong class="flash-translation">${escapeHtml(item.ru)}</strong>
+                <span class="pronunciation">${escapeHtml(item.pronunciation)}</span>
+                <button class="btn btn-sound" data-speak="${escapeHtml(item.de)}" type="button" style="margin-top:22px">🔊 Услышать ещё раз</button>
+                <span class="flip-hint">Нажмите, чтобы вернуться</span>
+              </div>
+            </div>
+          </div>
+          <div class="flash-actions">
+            <button class="btn btn-secondary" id="previousCard" type="button">← Назад</button>
+            <button class="btn btn-primary" id="nextCard" type="button">Следующая карточка →</button>
+          </div>
+          <p class="footer-note">${flashIndex + 1} из ${vocabulary.length} · Карточки с ошибками будут возвращаться чаще</p>
+        </div>`;
+
+      document.querySelector('#flashcard').addEventListener('click', event => {
+        if (event.target.closest('[data-speak]')) return;
+        flashFlipped = !flashFlipped;
+        document.querySelector('#flashcard').classList.toggle('is-flipped', flashFlipped);
+      });
+      document.querySelector('#flashcard').addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          flashFlipped = !flashFlipped;
+          document.querySelector('#flashcard').classList.toggle('is-flipped', flashFlipped);
+        }
+      });
+      document.querySelectorAll('[data-speak]').forEach(button => button.addEventListener('click', event => {
+        event.stopPropagation();
+        speak(button.dataset.speak);
+      }));
+      document.querySelector('#nextCard').addEventListener('click', () => {
+        // Следующая карточка выбирается с учётом ошибок — сложные слова возвращаются чаще.
+        const nextItem = weightedItem(vocabulary);
+        flashIndex = vocabulary.indexOf(nextItem);
+        flashFlipped = false;
+        renderFlashcards();
+      });
+      document.querySelector('#previousCard').addEventListener('click', () => {
+        flashIndex = (flashIndex - 1 + vocabulary.length) % vocabulary.length;
+        flashFlipped = false;
+        renderFlashcards();
+      });
+    }
+
+    function startQuiz(type) {
+      quiz = { type, total: 10, number: 0, score: 0, answered: false, questions: [] };
+      for (let i = 0; i < quiz.total; i++) quiz.questions.push(weightedItem(vocabulary));
+      renderQuiz(type);
+    }
+
+    function renderQuiz(type) {
+      if (!quiz || quiz.type !== type) startQuiz(type);
+      if (quiz.number >= quiz.total) return renderResult();
+      const item = quiz.questions[quiz.number];
+      const isReverse = type === 'ru-to-de';
+      const correct = isReverse ? item.de : item.ru;
+      const question = isReverse ? item.ru : item.de;
+      const options = shuffle([correct, ...shuffle(vocabulary.filter(word => word.id !== item.id)).slice(0, 3).map(word => isReverse ? word.de : word.ru)]);
+      const percent = (quiz.number + 1) / quiz.total * 100;
+
+      document.querySelector('#content').innerHTML = `
+        <div class="panel">
+          <div class="mode-heading">
+            <div><h2>${isReverse ? 'Перевод → слово' : 'Слово → перевод'}</h2><p>Выберите правильный вариант ответа.</p></div>
+            <span class="topic-pill">● ${escapeHtml(item.topic)}</span>
+          </div>
+          <div class="card quiz-card">
+            <div class="quiz-top"><span>Вопрос ${quiz.number + 1} из ${quiz.total}</span><span>Счёт: ${quiz.score}</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
+            <div class="question-label">${isReverse ? 'Как будет по-немецки?' : 'Что это значит?'}</div>
+            <h3 class="question">${escapeHtml(question)} <button class="btn btn-sound" data-speak="${escapeHtml(item.de)}" type="button" title="Произнести слово">🔊</button></h3>
+            <div class="answers">${options.map(option => `<button class="answer" data-answer="${escapeHtml(option)}" type="button">${escapeHtml(option)}</button>`).join('')}</div>
+            <div class="feedback" id="feedback" aria-live="polite"></div>
+          </div>
+        </div>`;
+
+      document.querySelector('[data-speak]').addEventListener('click', event => {
+        event.stopPropagation();
+        speak(item.de);
+      });
+      document.querySelectorAll('.answer').forEach(button => button.addEventListener('click', () => {
+        if (quiz.answered) return;
+        quiz.answered = true;
+        const isCorrect = button.dataset.answer === correct;
+        markAnswer(item.id, isCorrect);
+        if (isCorrect) quiz.score++;
+        document.querySelectorAll('.answer').forEach(answer => {
+          answer.disabled = true;
+          if (answer.dataset.answer === correct) answer.classList.add('correct');
+        });
+        if (!isCorrect) button.classList.add('wrong');
+        const feedback = document.querySelector('#feedback');
+        feedback.className = 'feedback ' + (isCorrect ? 'good' : 'bad');
+        feedback.textContent = isCorrect ? 'Верно! Отличная работа.' : `Почти! Правильный ответ: ${correct}`;
+        setTimeout(() => {
+          quiz.number++;
+          quiz.answered = false;
+          renderQuiz(type);
+        }, 850);
+      }));
+    }
+
+    function renderResult() {
+      state.lastScore = quiz.score;
+      state.bestScore = Math.max(state.bestScore, quiz.score);
+      saveState();
+      const percentage = Math.round(quiz.score / quiz.total * 100);
+      const icon = percentage >= 80 ? '🎉' : percentage >= 50 ? '👏' : '💪';
+      const message = percentage >= 80 ? 'Прекрасный результат!' : percentage >= 50 ? 'Хорошая работа, продолжайте!' : 'Повторение поможет запомнить больше.';
+      document.querySelector('#content').innerHTML = `
+        <div class="panel">
+          <div class="card result">
+            <div class="result-icon">${icon}</div>
+            <h3>${message}</h3>
+            <p>Тест завершён. Ошибки добавлены в отложенные карточки и будут встречаться чаще.</p>
+            <div class="score-big">${quiz.score} / ${quiz.total}</div>
+            <button class="btn btn-primary" id="repeatQuiz" type="button">↻ Пройти ещё раз</button>
+          </div>
+        </div>`;
+      document.querySelector('#repeatQuiz').addEventListener('click', () => {
+        if (quiz.type === 'fill') {
+          quiz = null;
+          renderFill();
+        } else {
+          startQuiz(quiz.type);
+        }
+      });
+    }
+
+    function renderFill() {
+      if (!quiz || quiz.type !== 'fill') {
+        quiz = { type: 'fill', total: 10, number: 0, score: 0, answered: false, questions: shuffle(fillQuestions).slice(0, 10) };
+      }
+      if (quiz.number >= quiz.total) return renderResult();
+      const item = quiz.questions[quiz.number];
+      const percent = (quiz.number + 1) / quiz.total * 100;
+      document.querySelector('#content').innerHTML = `
+        <div class="panel">
+          <div class="mode-heading">
+            <div><h2>Вставь пропущенное слово</h2><p>Впишите слово и проверьте себя. Регистр не важен.</p></div>
+            <span class="topic-pill">● Простые фразы</span>
+          </div>
+          <div class="card quiz-card">
+            <div class="quiz-top"><span>Фраза ${quiz.number + 1} из ${quiz.total}</span><span>Счёт: ${quiz.score}</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
+            <div class="question-label">Какое слово пропущено?</div>
+            <form id="fillForm">
+              <div class="fill-form"><span>${escapeHtml(item.parts[0])}</span><input class="fill-input" id="fillInput" autocomplete="off" autocapitalize="none" aria-label="Пропущенное слово"><span>${escapeHtml(item.parts[1])}</span></div>
+              <div class="fill-actions"><button class="btn btn-primary" type="submit">Проверить ответ</button><button class="btn btn-secondary" id="showHint" type="button">💡 Подсказка</button></div>
+              <div class="hint" id="fillHint">&nbsp;</div>
+            </form>
+          </div>
+        </div>`;
+      const input = document.querySelector('#fillInput');
+      input.focus();
+      document.querySelector('#showHint').addEventListener('click', () => {
+        document.querySelector('#fillHint').innerHTML = `Перевод: <strong>${escapeHtml(item.hint)}</strong>`;
+      });
+      document.querySelector('#fillForm').addEventListener('submit', event => {
+        event.preventDefault();
+        if (quiz.answered) return;
+        quiz.answered = true;
+        const answer = input.value.trim().toLowerCase();
+        const expected = item.answer.toLowerCase();
+        const isCorrect = answer === expected;
+        markAnswer(item.id, isCorrect);
+        if (isCorrect) quiz.score++;
+        input.disabled = true;
+        input.style.borderBottomColor = isCorrect ? 'var(--success)' : 'var(--danger)';
+        const feedback = document.createElement('div');
+        feedback.className = 'feedback ' + (isCorrect ? 'good' : 'bad');
+        feedback.textContent = isCorrect ? 'Верно! Отличная работа.' : `Правильный ответ: ${item.answer}`;
+        document.querySelector('#fillForm').appendChild(feedback);
+        setTimeout(() => {
+          quiz.number++;
+          quiz.answered = false;
+          renderFill();
+        }, 1000);
+      });
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+      currentMode = tab.dataset.mode;
+      quiz = null;
+      render();
+    }));
+
+    render();
+  </script>
+</body>
+</html>
